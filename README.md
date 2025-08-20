@@ -1,29 +1,65 @@
-# ESP32-VFD-8DM-Drive
+
+# FUTABA-VFD-8-MD-06INKM Driver
 
 English | [简体中文](README_CN.md)
 
-*Futaba VFD display (8-MD-06INKM) driver for Arduino (This project is developed using the platformio platform)*
+*A modern Arduino/PlatformIO driver for the Futaba 8-MD-06INKM VFD display (SPI interface)*
 
-## 1. Description
+## Features
 
-- Class name: VFD_Display
-- VFD.h: Header file for the driver
-- VFD.cpp: Main program for the driver
-- main.cpp: Example program provided
+- Easy-to-use C++ class: `FutabaVFD`
+- Supports up to 16 digits (configurable)
+- Adjustable brightness (0~240)
+- Custom character (5x7 dot matrix) support
+- Standby (power-saving) mode
+- Full SPI hardware support (mode 3, LSB first)
+- Example and test code included
 
-## 2. Functions
+## Getting Started
 
-| No.  | Function Name                                                | Parameters                                                   | Purpose                                                      |
-| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 1    | *void* init()                                                | **NONE**                                                     | Initialize the VFD screen, including SPI initialization      |
-| 2    | *void* clear(*char* **bit**)                                 | **bit**: Display bit                                         | Clear the display of the specified bit, when bit is not specified, clear the display of all bits |
-| 3    | *void* show(*char* **bit**, String / char **str / char**)    | **bit**: Display bit   **str / char**: Character (string) to display | Display the character (string) after the specified bit       |
-| 4    | *void* setCmd(byte **cmd**, byte **data**)                   | **cmd**: Command   **data**: Data                            | Send a command directly to the VFD                           |
-| 5    | *void* showCustdata(*char* **bit**, *char* **flag**)         | **bit**: Display bit   **flag**: Flag for the image          | Display a custom image                                       |
-| 6    | *void* standbyMode(*bool* **mode**)                          | **mode**: Standby mode enable                                | Enable or disable VFD power-saving mode                      |
-| 7    | *void* displayStatus(*bool* **status**)                      | **status**: Display on/off                                   | Turn the VFD display on or off                               |
-| 8    | *void* setDimming(byte **dimming**)                          | **dimming**: Display brightness                              | Set the display brightness of the VFD (range 0 to 255)       |
-| 9    | *void* writeCustdata(*char* **flag**, *const* byte * **data**) | **flag**: Flag to write to   ***data**: Image array          | Write custom image to VFD                                    |
-| 10   | *void* fadeIn(byte **pertime**)                              | **pertime**: Delay time per step                             | Fade-in effect for VFD                                       |
-| 11   | *void* fadeOut(byte **pertime**)                             | **pertime**: Delay time per step                             | Fade-out effect for VFD                                      |
-| 12   | *void* RDnum(*char* **bit**)                                 | **bit**: Bit to display gibberish                            | Display gibberish for a specific bit on VFD                  |
+### 1. Hardware
+
+- Connect the VFD display to your MCU's SPI bus (see datasheet for pinout)
+- Set the CS (chip select) pin in your code (default: 10)
+
+### 2. Usage Example
+
+```cpp
+#include <Arduino.h>
+#include <SPI.h>
+#include "FutabaVFD.h"
+
+#define VFD_CS_PIN 10
+FutabaVFD vfd(VFD_CS_PIN, &SPI);
+
+void setup() {
+	vfd.setDigit(8);
+	vfd.setBrightness(120);
+	vfd.displayOn();
+	vfd.showString(0, "HELLO123");
+}
+
+void loop() {
+	// Count up demo
+	static int count = 0;
+	char buf[9];
+	snprintf(buf, sizeof(buf), "%8d", count++);
+	vfd.showString(0, buf);
+	delay(500);
+}
+```
+
+More examples can be found in `lib/FutabaVFD/examples/`.
+
+## API Overview
+
+| Method | Description |
+| ------ | ----------- |
+| `setDigit(uint8_t digit)` | Set number of display digits (1~16) |
+| `setBrightness(uint8_t brightness)` | Set brightness (0~240) |
+| `showCharacter(uint8_t pos, char c)` | Show a character at position |
+| `showString(uint8_t pos, const char* str)` | Show a string from position |
+| `writeCustomPattern(uint8_t addr, const uint8_t pattern[5])` | Write a custom 5x7 pattern |
+| `showCustomPattern(uint8_t pos, uint8_t addr)` | Show a custom pattern at position |
+| `displayOn()` / `displayOff()` | Turn display on/off |
+| `setStandbyMode(bool standby)` | Enter/exit standby mode |
