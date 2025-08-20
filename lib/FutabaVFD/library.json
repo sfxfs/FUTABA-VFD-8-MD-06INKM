@@ -1,0 +1,19 @@
+{
+  "name": "FutabaVFD",
+  "version": "1.0.0",
+  "description": "Driver library for FUTABA 8-MD-06INKM VFD display (SPI interface)",
+  "keywords": ["vfd", "futaba", "display", "spi"],
+  "authors": [
+    {
+      "name": "sfxfs",
+      "email": "",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": ["arduino"],
+  "platforms": ["atmelavr", "espressif32", "espressif8266", "ststm32"],
+  "build": {
+    "srcFilter": ["+<FutabaVFD.cpp>", "+<FutabaVFD.h>"]
+  }
+}
