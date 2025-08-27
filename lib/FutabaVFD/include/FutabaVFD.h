@@ -26,49 +26,20 @@
 
 #include <Arduino.h>
 #include <SPI.h>
-
-#define FUTABA_VFD_MAX_CP_FREQ 500000 // 0.5 MHz is the max serial clock frequency
-// Sampled on clock rising edge, idle high, SPI mode 3; LSB First
-#define FUTABA_VFD_MAX_CP_FREQ 500000
-
-#define FUTABA_VFD_DEF_DIGIT 8   // Default digit count
-#define FUTABA_VFD_MAX_DIGIT 16  // Maximum digit count
-#define FUTABA_VFD_MAX_BRIGHTNESS 240 // Maximum brightness value
-
-// Command definitions
-// OR with digit position (5 bits), then UTF8 character code, total 2 bytes
-#define FUTABA_VFD_CMD_DCRAM_DATA_WRITE 0x20
-
-// OR with address (3 bits), then 5 bytes (5x7 dot matrix, highest bit unused), total 6 bytes
-#define FUTABA_VFD_CMD_CGRAM_DATA_WRITE 0x40
-
-// Directly followed by digit count (7 bits), total 2 bytes
-#define FUTABA_VFD_CMD_DIGIT_SET 0xE0
-
-// Directly followed by brightness value (1 byte, max 240), total 2 bytes
-#define FUTABA_VFD_CMD_DIMMING_SET 0xE4
-
-// Send directly, total 1 byte
-#define FUTABA_VFD_CMD_DISPLAY_ON 0xE8
-
-// Send directly, total 1 byte
-#define FUTABA_VFD_CMD_DISPLAY_OFF 0xEA
-
-// OR with enable bit, 1 to enable standby (1 bit), total 1 byte
-#define FUTABA_VFD_CMD_SET_STANDBY_MODE 0xEC
-
+#include <vector>
 
 /**
  * @brief Class for controlling FUTABA 8-MD-06INKM VFD display via SPI
  */
-class FutabaVFD {
+class FutabaVFD
+{
 public:
   /**
    * @brief Constructor
    * @param csPin Chip select pin
    * @param spi Pointer to SPIClass, default is &SPI
    */
-  FutabaVFD(int csPin, SPIClass *spi = &SPI);
+  FutabaVFD(int csPin, SPIClass &spi = SPI);
 
   /**
    * @brief Write a custom 5x7 dot pattern to CGRAM
@@ -134,10 +105,39 @@ public:
   void setStandbyMode(bool standby);
 
 private:
-  int _csPin;           ///< Chip select pin
-  SPIClass *_spi;       ///< SPI interface pointer
+  static constexpr uint32_t max_cp_freq{500000}; // 0.5 MHz is the max serial clock frequency
+                                                 // Sampled on clock rising edge, idle high, SPI mode 3; LSB First
+
+  static constexpr uint32_t default_digit{8};        // Default digit count
+  static constexpr uint32_t max_digit{16};           // Maximum digit count
+  static constexpr uint32_t default_brightness{120}; // Default brightness value
+  static constexpr uint32_t max_brightness{240};     // Maximum brightness value
+
+  // OR with enable bit, 1 to enable standby (1 bit), total 1 byte
+  static constexpr uint8_t cmd_set_standby_mode{0xEC};
+
+  // Send directly, total 1 byte
+  static constexpr uint8_t cmd_display_off{0xEA};
+
+  // Send directly, total 1 byte
+  static constexpr uint8_t cmd_display_on{0xE8};
+
+  // Directly followed by brightness value (1 byte, max 240), total 2 bytes
+  static constexpr uint8_t cmd_set_dimming{0xE4};
+
+  // Directly followed by digit count (7 bits), total 2 bytes
+  static constexpr uint8_t cmd_set_digit{0xE0};
+
+  // OR with address (3 bits), then 5 bytes (5x7 dot matrix, highest bit unused), total 6 bytes
+  static constexpr uint8_t cmd_write_cgram_data{0x40};
+
+  // OR with digit position (5 bits), then UTF8 character code, total 2 bytes
+  static constexpr uint8_t cmd_write_dcram_data{0x20};
+
+  int m_csPin{};   ///< Chip select pin
+  SPIClass &m_spi; ///< SPI interface pointer
 
   void init();
   void sendCommand(uint8_t cmd);
-  void sendCommandWithData(uint8_t cmd, uint8_t *data, size_t data_len);
+  void sendCommandWithData(uint8_t cmd, const std::vector<uint8_t> &data);
 };

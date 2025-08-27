@@ -24,79 +24,92 @@
 
 #include "FutabaVFD.h"
 
-FutabaVFD::FutabaVFD(int csPin, SPIClass *spi) : _csPin(csPin), _spi(spi) {
-  pinMode(_csPin, OUTPUT);
-  digitalWrite(_csPin, HIGH);
+FutabaVFD::FutabaVFD(int csPin, SPIClass &spi) : m_csPin(csPin), m_spi(spi)
+{
+  pinMode(m_csPin, OUTPUT);
+  digitalWrite(m_csPin, HIGH);
   init();
 }
 
-void FutabaVFD::init() {
-  _spi->begin();
+void FutabaVFD::init()
+{
+  m_spi.begin();
   // SPI设置：模式3，LSB First，0.5MHz
-  _spi->beginTransaction(
-      SPISettings(FUTABA_VFD_MAX_CP_FREQ, LSBFIRST, SPI_MODE3));
-  setDigit(FUTABA_VFD_DEF_DIGIT);           // 默认8位
-  setBrightness(FUTABA_VFD_MAX_BRIGHTNESS); // 默认最大亮度
+  m_spi.beginTransaction(
+      SPISettings(max_cp_freq, LSBFIRST, SPI_MODE3));
+  setDigit(default_digit);           // 默认8位
+  setBrightness(default_brightness); // 默认最大亮度
   displayOn();
 }
 
-void FutabaVFD::sendCommand(uint8_t cmd) {
-  digitalWrite(_csPin, LOW);
-  _spi->transfer(cmd);
-  digitalWrite(_csPin, HIGH);
+void FutabaVFD::sendCommand(uint8_t cmd)
+{
+  digitalWrite(m_csPin, LOW);
+  m_spi.transfer(cmd);
+  digitalWrite(m_csPin, HIGH);
 }
 
-void FutabaVFD::sendCommandWithData(uint8_t cmd, uint8_t *data,
-                                    size_t data_len) {
-  digitalWrite(_csPin, LOW);
-  _spi->transfer(cmd);
-  _spi->transfer(data, data_len);
-  digitalWrite(_csPin, HIGH);
+void FutabaVFD::sendCommandWithData(uint8_t cmd, const std::vector<uint8_t> &data)
+{
+  digitalWrite(m_csPin, LOW);
+  m_spi.transfer(cmd);
+  for (auto byte : data)
+  {
+    m_spi.transfer(byte);
+  }
+  digitalWrite(m_csPin, HIGH);
 }
 
-void FutabaVFD::writeCustomPattern(uint8_t addr, const uint8_t pattern[5]) {
-  sendCommandWithData(FUTABA_VFD_CMD_CGRAM_DATA_WRITE | (addr & 0x07),
-                      (uint8_t *)pattern, 5);
+void FutabaVFD::writeCustomPattern(uint8_t addr, const uint8_t pattern[5])
+{
+  sendCommandWithData(cmd_write_cgram_data | (addr & 0x07),
+                      {pattern, pattern + 5});
 }
 
-void FutabaVFD::showCustomPattern(uint8_t dig, uint8_t addr) {
-  sendCommandWithData(FUTABA_VFD_CMD_DCRAM_DATA_WRITE | (dig & 0x1F),
-                      (uint8_t *)&addr, 1);
+void FutabaVFD::showCustomPattern(uint8_t dig, uint8_t addr)
+{
+  sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
+                      {addr});
 }
 
-void FutabaVFD::showCharacter(uint8_t dig, const char c) {
+void FutabaVFD::showCharacter(uint8_t dig, const char c)
+{
   // dig: 0~7
-  sendCommandWithData(FUTABA_VFD_CMD_DCRAM_DATA_WRITE | (dig & 0x1F),
-                      (uint8_t *)&c, 1);
+  sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
+                      {static_cast<uint8_t>(c)});
 }
 
-void FutabaVFD::showString(uint8_t dig, String str) {
-  sendCommandWithData(FUTABA_VFD_CMD_DCRAM_DATA_WRITE | (dig & 0x1F),
-                      (uint8_t *)str.c_str(), str.length());
+void FutabaVFD::showString(uint8_t dig, String str)
+{
+  sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
+                      {(const uint8_t *)str.c_str(), (const uint8_t *)str.c_str() + str.length()});
 }
 
-void FutabaVFD::showString(uint8_t dig, const char *str) {
-  sendCommandWithData(FUTABA_VFD_CMD_DCRAM_DATA_WRITE | (dig & 0x1F),
-                      (uint8_t *)str, strlen(str));
+void FutabaVFD::showString(uint8_t dig, const char *str)
+{
+  sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
+                      {(const uint8_t *)str, (const uint8_t *)str + strlen(str)});
 }
 
-void FutabaVFD::setBrightness(uint8_t brightness) {
-  if (brightness > FUTABA_VFD_MAX_BRIGHTNESS)
-    brightness = FUTABA_VFD_MAX_BRIGHTNESS;
-  sendCommandWithData(FUTABA_VFD_CMD_DIMMING_SET, &brightness, 1);
+void FutabaVFD::setBrightness(uint8_t brightness)
+{
+  brightness = constrain(brightness, 0, max_brightness);
+  sendCommandWithData(cmd_set_dimming, {brightness});
 }
 
-void FutabaVFD::setDigit(uint8_t digit) {
-  digit = constrain(digit, 1, FUTABA_VFD_MAX_DIGIT);
+void FutabaVFD::setDigit(uint8_t digit)
+{
+  digit = constrain(digit, 1, max_digit);
   digit--;
-  sendCommandWithData(FUTABA_VFD_CMD_DIGIT_SET, &digit, 1);
+  sendCommandWithData(cmd_set_digit, {digit});
 }
 
-void FutabaVFD::displayOn() { sendCommand(FUTABA_VFD_CMD_DISPLAY_ON); }
+void FutabaVFD::displayOn() { sendCommand(cmd_display_on); }
 
-void FutabaVFD::displayOff() { sendCommand(FUTABA_VFD_CMD_DISPLAY_OFF); }
+void FutabaVFD::displayOff() { sendCommand(cmd_display_off); }
 
-void FutabaVFD::setStandbyMode(bool standby) {
-  uint8_t cmd = FUTABA_VFD_CMD_SET_STANDBY_MODE | (standby ? 0x01 : 0x00);
+void FutabaVFD::setStandbyMode(bool standby)
+{
+  uint8_t cmd = cmd_set_standby_mode | (standby ? 0x01 : 0x00);
   sendCommand(cmd);
 }
