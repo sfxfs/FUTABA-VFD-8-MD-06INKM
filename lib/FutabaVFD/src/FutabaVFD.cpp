@@ -82,13 +82,13 @@ void FutabaVFD::showCharacter(uint8_t dig, const char c)
 void FutabaVFD::showString(uint8_t dig, String str)
 {
   sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
-                      {(const uint8_t *)str.c_str(), (const uint8_t *)str.c_str() + str.length()});
+                      {str.begin(), str.end()});
 }
 
 void FutabaVFD::showString(uint8_t dig, const char *str)
 {
   sendCommandWithData(cmd_write_dcram_data | (dig & 0x1F),
-                      {(const uint8_t *)str, (const uint8_t *)str + strlen(str)});
+                      {str, str + strlen(str)});
 }
 
 void FutabaVFD::setBrightness(uint8_t brightness)
